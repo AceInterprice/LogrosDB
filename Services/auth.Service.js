@@ -2,10 +2,12 @@ import config from "../DB/ConfigDB.js";
 import {pool} from "../DB/ConexionDB.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import crypto from "crypto";
+//import { sendResetEmail } from "../Utils/mailer.Util.js";
 
 const JWT_TOKEN = config.jwtSecret;
 
-export async function registro({names, first_last_name, second_last_name, email, password, role}) {
+export async function register({names, first_last_name, second_last_name, email, password, role}) {
   
   console.log({names, first_last_name, second_last_name, email, password, role});
 
@@ -31,7 +33,7 @@ export async function registro({names, first_last_name, second_last_name, email,
   try{
     const [result] = await pool.query(
         "INSERT INTO users (names, first_last_name, second_last_name, email, password) VALUES(?,?,?,?,?)",
-        [names, first_last_name, second_last_name, email, hashPassword]
+        [names, first_last_name, second_last_name, email, hashPassword, role]
     )
 
     return {
@@ -39,7 +41,8 @@ export async function registro({names, first_last_name, second_last_name, email,
         names,
         first_last_name, 
         second_last_name, 
-        email
+        email, 
+        role: role || "USER"
     }
 
   } catch (error) {
@@ -50,7 +53,7 @@ export async function registro({names, first_last_name, second_last_name, email,
   }
 }
 
-export async function inicio_sesion({email, password}) {
+export async function login({email, password}) {
 
     if(!email){
         throw new Error("Ingrese su email")
@@ -69,7 +72,7 @@ export async function inicio_sesion({email, password}) {
     const [row] = await pool.query(query, [email]);
 
     if (row.length === 0){
-        throw new Error("Credenciales invalidas")
+        throw new Error("Sin credenciales validas")
     }
 
     const user = row[0];
@@ -101,7 +104,43 @@ export async function inicio_sesion({email, password}) {
             email: user.email, 
             role: user.role
         }
+    } 
+}
+
+//pendiente a revicion
+/*
+export async function forgotPassword(email){
+    if(!email){
+      throw new Error("Se necesita un email para restablecer la contraseña");
     }
 
-    
+    const [rows] = await pool.query(
+      `
+      SELECT id FROM users WHERE email = ? LIMIT 1
+      `,
+      email
+    ); 
+
+    if(rows.length === 0){
+      throw new Error("Si el correo existe, se enviaran instrucciones");
+    }
+
+    const token = crypto.randomBytes(32).toString("hex"); 
+    const expires = new Date(Date.now() + 60 * 60 * 1000); 
+
+    await pool.query(
+    `UPDATE users 
+     SET reset_token = ?, reset_token_expires = ?
+     WHERE email = ?`,
+    [token, expires, email]
+    );
+
+    await sendResetEmail(email, token);
+
+  return {
+    message: "Si el correo existe, se enviaron instrucciones",
+    token
+  };
+
 }
+*/

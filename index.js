@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors"; 
 import config from "./DB/ConfigDB.js"; 
 import authRouter from "./Routers/auth.Route.js";
+import userRouter from "./Routers/Usuarios.Route.js"; 
 import {pool} from "./DB/ConexionDB.js"; 
 
 const app = express(); 
@@ -18,6 +19,7 @@ app.use((req, res, next) => {
 
 // Rutas
 app.use("/api/auth", authRouter);
+app.use("/api", userRouter);
 
 // Ruta de prueba
 app.get("/api/health", async (req, res) => {

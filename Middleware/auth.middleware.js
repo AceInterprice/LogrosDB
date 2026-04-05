@@ -1,7 +1,7 @@
 import jwt from "jsonwebtoken";
 import config from "../DB/ConfigDB.js";
 
-export const verificarToken = (req, res, next) => {
+export const checkToken = (req, res, next) => {
   const authHeader = req.headers.authorization;
 
   if (!authHeader) {
@@ -34,8 +34,7 @@ export const verificarToken = (req, res, next) => {
 };
 
 
-//
-export const verificarRol = (rolesPermitidos = []) => {
+export const checkRole = (allowedRoles = []) => {
   return (req, res, next) => {
 
     if (!req.user || !req.user.role) {
@@ -44,7 +43,7 @@ export const verificarRol = (rolesPermitidos = []) => {
       });
     }
 
-    if (!rolesPermitidos.includes(req.user.role)) {
+    if (!allowedRoles.includes(req.user.role)) {
       return res.status(403).json({
         message: "No tienes permisos para acceder a este recurso"
       });
