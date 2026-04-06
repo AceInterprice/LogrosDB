@@ -19,50 +19,21 @@ export async function getMyUser(id) {
   return rows[0];
 }
 
-export async function getAllUsers({
-  page = 1,
-  limit = 20,
-  role = null,
-  search = null
-}) {
-
+export async function getAllUsers({ page = 1, limit = 20, search = null }) {
   const offset = (page - 1) * limit;
-
-  let where = [];
   let params = [];
+  let whereSQL = "";
 
-  // 🔹 filtro por rol (opcional)
-  if (role) {
-    where.push("role = ?");
-    params.push(role);
-  }
-
-  // 🔹 búsqueda (nombre o email)
+  // 4. CAMBIO: Búsqueda automática en Nombres o Apellidos (Buscador inteligente)
   if (search) {
-    where.push(`(
-      names LIKE ? OR 
-      first_last_name LIKE ? OR 
-      email LIKE ?
-    )`);
-
+    whereSQL = `WHERE (names LIKE ? OR first_last_name LIKE ? OR second_last_name LIKE ? OR email LIKE ?)`;
     const s = `%${search}%`;
-    params.push(s, s, s);
+    params.push(s, s, s, s);
   }
 
-  const whereSQL = where.length
-    ? `WHERE ${where.join(" AND ")}`
-    : "";
-
-  // 🔹 query principal
   const [rows] = await pool.query(
-    `
-    SELECT id, names, first_last_name, second_last_name,
-           email, role, created_at, updated_at
-    FROM users
-    ${whereSQL}
-    ORDER BY created_at DESC
-    LIMIT ? OFFSET ?
-    `,
+    `SELECT id, names, first_last_name, second_last_name, email, role, profile_image_url, created_at 
+     FROM users ${whereSQL} ORDER BY created_at DESC LIMIT ? OFFSET ?`,
     [...params, Number(limit), Number(offset)]
   );
 
@@ -88,52 +59,23 @@ export async function getAllUsers({
 }
 
 export async function patchUserProfile(id, data) {
-
   const fields = []; 
   const values = []; 
 
-  if (data.names !== undefined) {
-    fields.push("names = ?"); 
-    values.push(data.names); 
-  }
+  // 5. CAMBIO: Se agrega profile_image_url para el link de Cloudinary
+  const camposPermitidos = ['names', 'first_last_name', 'second_last_name', 'email', 'profile_image_url'];
 
-  if (data.first_last_name !== undefined) {
-    fields.push("first_last_name = ?"); 
-    values.push(data.first_last_name); 
-  }
-
-  if (data.second_last_name !== undefined) {
-    fields.push("second_last_name = ?"); 
-    values.push(data.second_last_name); 
-  }
-
-  if (data.email !== undefined) {
-
-    const [emailCheck] = await pool.query(
-      "SELECT id FROM users WHERE email = ? AND id != ?",
-      [data.email, id]
-    );
-
-    if (emailCheck.length > 0) {
-      throw new Error("El email ya está en uso");
+  camposPermitidos.forEach(campo => {
+    if (data[campo] !== undefined) {
+      fields.push(`${campo} = ?`);
+      values.push(data[campo]);
     }
+  });
 
-    fields.push("email = ?"); 
-    values.push(data.email); 
-  }
-
-  if (fields.length === 0) {
-    throw new Error("No hay campos para actualizar"); 
-  }
+  if (fields.length === 0) throw new Error("No hay campos para actualizar");
 
   values.push(id); 
-
-  const query = `
-    UPDATE users 
-    SET ${fields.join(", ")} 
-    WHERE id = ?
-  `;
-
+  const query = `UPDATE users SET ${fields.join(", ")} WHERE id = ?`;
   await pool.query(query, values); 
 
   return { message: "Perfil actualizado correctamente" }; 

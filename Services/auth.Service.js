@@ -4,20 +4,23 @@ import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import crypto from "crypto";
 //import { sendResetEmail } from "../Utils/mailer.Util.js";
+import { sendResetEmail } from "../Utils/mailer.Util.js";
 
 const JWT_TOKEN = config.jwtSecret;
 
+// ... (imports iguales)
+
 export async function register({names, first_last_name, second_last_name, email, password, role}) {
   
-  console.log({names, first_last_name, second_last_name, email, password, role});
-
-  const emailRegex = /^[^@]+@[^@]+\.[^@]+$/;
-  if (!email || !emailRegex.test(email)) {
-    throw new Error("Formato de email inválido");   
+  // 1. CAMBIO: Validación solo para Gmail
+  const gmailRegex = /^[a-zA-Z0-9._%+-]+@gmail\.com$/;
+  if (!email || !gmailRegex.test(email)) {
+    throw new Error("Solo se permiten correos de @gmail.com");
   }
 
-  if (!password || password.length < 6) {
-    throw new Error("La contraseña debe tener mínimo 6 caracteres");
+  // 2. CAMBIO: Validación de caracteres (Mínimo 8 como pide el nuevo requisito)
+  if (!password || password.length < 8 || password.length > 20) {
+    throw new Error("La contraseña debe tener entre 8 y 20 caracteres");
   }
 
   const [Existe] = await pool.query(
@@ -30,21 +33,23 @@ export async function register({names, first_last_name, second_last_name, email,
 
   const hashPassword = await bcrypt.hash(password, 10); 
 
-  try{
+  // 3. CAMBIO: Lógica de rol automático (Si no envían nada, es USER)
+  const finalRole = role ? role.toUpperCase() : "USER";
+
+  try {
     const [result] = await pool.query(
-        "INSERT INTO users (names, first_last_name, second_last_name, email, password) VALUES(?,?,?,?,?)",
-        [names, first_last_name, second_last_name, email, hashPassword, role]
+        // Agregado 'role' al INSERT
+        "INSERT INTO users (names, first_last_name, second_last_name, email, password, role) VALUES(?,?,?,?,?,?)",
+        [names, first_last_name, second_last_name, email, hashPassword, finalRole]
     )
 
     return {
         id: result.insertId, 
         names,
-        first_last_name, 
-        second_last_name, 
         email, 
-        role: role || "USER"
+        role: finalRole
     }
-
+// ... resto del código igual
   } catch (error) {
     if (error.code === "ER_DUP_ENTRY") {
       throw new Error("El email ya existe");
@@ -105,6 +110,62 @@ export async function login({email, password}) {
             role: user.role
         }
     } 
+}
+// 1. Solicitar el código (POST)
+export async function forgotPassword(email) {
+  if (!email) throw new Error("El email es obligatorio");
+
+  const [user] = await pool.query("SELECT id FROM users WHERE email = ? LIMIT 1", [email]);
+  
+  if (user.length === 0) {
+    return { message: "Si el correo existe, se enviaron instrucciones" };
+  }
+
+  // GENERAR CÓDIGO DE 6 DÍGITOS (Ejemplo: 529401)
+  const code = Math.floor(100000 + Math.random() * 900000).toString();
+  
+  // EXPIRACIÓN CORTA (15 minutos es más seguro para códigos)
+  const expires = new Date(Date.now() + 15 * 60 * 1000); 
+
+  // Guardamos el código en la misma columna 'reset_token'
+  await pool.query(
+    "UPDATE users SET reset_token = ?, reset_token_expires = ? WHERE email = ?",
+    [code, expires, email]
+  );
+
+  // Enviamos el código por correo
+  await sendResetEmail(email, code);
+
+  return { message: "Código de verificación enviado al correo" };
+}
+
+// 2. Validar código y cambiar contraseña (PATCH)
+export async function resetPassword({ token, newPassword }) {
+  // El 'token' que recibe ahora es el código de 6 dígitos que el usuario escribe
+  
+  if (newPassword.length < 8 || newPassword.length > 20) {
+    throw new Error("La contraseña debe tener entre 8 y 20 caracteres");
+  }
+
+  // Buscamos el código y que no haya expirado
+  const [rows] = await pool.query(
+    "SELECT id FROM users WHERE reset_token = ? AND reset_token_expires > NOW() LIMIT 1",
+    [token]
+  );
+
+  if (rows.length === 0) {
+    throw new Error("Código inválido o expirado");
+  }
+
+  const hashPassword = await bcrypt.hash(newPassword, 10);
+
+  // Limpiamos el código de la BD para que no se use otra vez
+  await pool.query(
+    "UPDATE users SET password = ?, reset_token = NULL, reset_token_expires = NULL WHERE id = ?",
+    [hashPassword, rows[0].id]
+  );
+
+  return { message: "Contraseña actualizada correctamente" };
 }
 
 //pendiente a revicion

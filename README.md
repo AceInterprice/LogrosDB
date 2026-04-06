@@ -23,6 +23,11 @@ db_name=
 db_port=
 jwt_secret=
 
+**Actualizaciones**
+ Correo (Resend)
+RESEND_API_KEY=re_12345...
+
+
 ## Enpoinds
 
 Prefijo para el uso de autentifiacion: /api/auth
@@ -73,4 +78,32 @@ tambien se cuenta que para la aparte del get hay un filtrado por nombre, email y
 ejemplo: 
 REQUEST RECIBIDO: GET /api/users?role=USER
 
+
+## Actualizaciones Recientes (Módulo Auth & User)
+Se ha reestructurado la API para cumplir con estándares de seguridad industrial y requisitos específicos de negocio:
+
+🔒 Seguridad y Validaciones
+Restricción de Dominio: La API ahora solo acepta registros con correos @gmail.com.
+
+Política de Contraseñas: Validación estricta de 8 a 20 caracteres en register y reset-password.
+
+Sistema OTP (One-Time Password): Se implementó la recuperación de contraseña mediante un código de 6 dígitos enviado vía Resend, eliminando vulnerabilidades de redirección.
+
+Gestión de Roles: Sistema de jerarquía donde el rol USER es automático, pero se permite la creación de ADMIN bajo supervisión.
+
+👤 Mejoras en el Módulo de Usuarios
+Buscador Inteligente: El endpoint de Admin permite buscar por names, first_last_name o second_last_name en una sola consulta (?search=).
+
+Perfiles Enriquecidos: Se añadió soporte para profile_image_url (Cloudinary ready).
+
+**Unificación de los 4 Módulos**
+En lugar de crear código separado, ahora Notes, Tasks, Achievements y Experiences funcionan con una lógica maestra. Esto garantiza que si corriges algo en uno, se mejora en todos automáticamente.
+
+Notes (Notas): Gestión de títulos y descripciones personales.
+
+Tasks (Tareas): Control de pendientes con estados (PENDING/COMPLETED) y fechas de entrega.
+
+Achievements (Logros): Registro de metas alcanzadas con fecha de obtención.
+
+Experiences (Experiencias): Historial profesional detallando empresa, cargo y periodos de tiempo.
 

@@ -3,6 +3,7 @@ import cors from "cors";
 import config from "./DB/ConfigDB.js"; 
 import authRouter from "./Routers/auth.Route.js";
 import userRouter from "./Routers/Usuarios.Route.js"; 
+import contentRoutes from "./Routers/content.routes.js"; 
 import {pool} from "./DB/ConexionDB.js"; 
 
 const app = express(); 
@@ -19,6 +20,7 @@ app.use((req, res, next) => {
 
 // Rutas
 app.use("/api/auth", authRouter);
+app.use('/api', contentRoutes);
 app.use("/api", userRouter);
 
 // Ruta de prueba
