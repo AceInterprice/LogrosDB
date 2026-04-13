@@ -17,7 +17,7 @@ router.get("/tasks", checkToken, checkRole(["ADMIN"]), getAllTasks);
 router.post("/tasks/create", checkToken, createTask);
 router.patch("/tasks/:id", checkToken, patchTask);
 router.delete("/tasks/me", checkToken, deleteTask);
-router.delete("/tasks/:id", checkRole(["ADMIN"]), checkToken, deleteTask);
+router.delete("/tasks/:id", checkToken, checkRole(["ADMIN"]), deleteTask);
 
 
 
