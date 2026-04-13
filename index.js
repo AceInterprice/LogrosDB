@@ -24,7 +24,7 @@ app.use((req, res, next) => {
 
 // Rutas
 app.use("/api/auth", authRouter);
-app.use('/api', contentRoutes);
+//app.use('/api', contentRoutes);
 app.use("/api", userRouter);
 app.use("/api", notesRouter);
 app.use("/api", achievementsRouter);

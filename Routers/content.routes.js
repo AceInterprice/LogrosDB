@@ -9,7 +9,7 @@ router.use(checkToken);
 
 // --- MODULE: NOTES ---
 // GET: Ver notas (USER: solo propias | ADMIN: todas)
-router.get('/notes', CC.handleGet('notes'));
+//router.get('/notes', CC.handleGet('notes'));
 // POST: Agregar una nota
 router.post('/notes', CC.handleCreate('notes'));
 // PATCH: Modificar una nota por ID

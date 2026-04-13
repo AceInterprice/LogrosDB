@@ -9,7 +9,7 @@ export async function getMyNotes(req, res) {
     return res.status(200).json(notes);
   } catch (error) {
     return res.status(500).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -21,46 +21,45 @@ export async function getAllNotes(req, res) {
     const notes = await NotesService.getAllNotes({
       page: Number(page) || 1,
       limit: Number(limit) || 10,
-      search: search || null
+      search: search || null,
     });
 
     return res.status(200).json(notes);
-
   } catch (error) {
     return res.status(500).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
 
 export async function createNote(req, res) {
   try {
-    const { title, content } = req.body;
+    const { title, note_type, content } = req.body;
 
     // validación básica
     if (!title) {
       return res.status(400).json({
-        error: "El título es requerido"
+        error: "El título es requerido",
       });
     }
 
     const note = await NotesService.createNotes(
       title,
+      note_type,
       content,
-      req.user.id
+      req.user.id,
     );
 
     return res.status(201).json(note);
   } catch (error) {
-
     if (error.message === "Tipo de nota inválido") {
       return res.status(400).json({
-        error: "note_type debe ser 'NOTA' o 'APUNTE'"
+        error: "note_type debe ser 'NOTA' o 'APUNTE'",
       });
     }
 
     return res.status(500).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -74,15 +73,14 @@ export async function patchNote(req, res) {
 
     return res.status(200).json(result);
   } catch (error) {
-
     if (error.message === "Tipo de nota inválido") {
       return res.status(400).json({
-        error: "note_type debe ser 'NOTA' o 'APUNTE'"
+        error: "note_type debe ser 'NOTA' o 'APUNTE'",
       });
     }
 
     return res.status(403).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -96,7 +94,7 @@ export async function deleteNote(req, res) {
     return res.status(200).json(result);
   } catch (error) {
     return res.status(404).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
