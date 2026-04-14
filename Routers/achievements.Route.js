@@ -16,7 +16,7 @@ router.get("/achievements/me", checkToken, getMyAchievements);
 router.get("/achievements", checkToken, checkRole(["ADMIN"]), getAllAchievements);
 router.post("/achievements/create", checkToken, createAchievement);
 router.patch("/achievements/:id", checkToken, patchAchievement);
-router.delete("/achievements/me", checkToken, deleteAchievement);
+router.delete("/achievements/:id", checkToken, deleteAchievement);
 router.delete("/achievements/:id", checkToken, checkRole(["ADMIN"]), deleteAchievement);
 
 

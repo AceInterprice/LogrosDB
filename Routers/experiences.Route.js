@@ -16,7 +16,7 @@ router.get("/experiences/me", checkToken, getMyExperiences);
 router.get("/experiences", checkToken, checkRole(["ADMIN"]), getAllExperiences);
 router.post("/experiences/create", checkToken, createExperience);
 router.patch("/experiences/:id", checkToken, patchExperience);
-router.delete("/experiences/me", checkToken, deleteExperience);
+router.delete("/experiences/:id", checkToken, deleteExperience);
 router.delete("/experiences/:id", checkToken, checkRole(["ADMIN"]), deleteExperience);
 
 

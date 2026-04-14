@@ -14,7 +14,7 @@ router.get("/notes/me", checkToken, getMyNotes);
 router.get("/notes", checkToken, checkRole(["ADMIN"]) ,getAllNotes); 
 router.post("/notes/create", checkToken, createNote); 
 router.patch("/notes/:id", checkToken, patchNote); 
-router.delete("/notes/me", checkToken, deleteNote);
+router.delete("/notes/:id", checkToken, deleteNote);
 router.delete("/notes/:id", checkToken, checkRole(["ADMIN"]), deleteNote);
 
 export default router;
