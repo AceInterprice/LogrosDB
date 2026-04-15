@@ -9,7 +9,7 @@ export async function getMyNotes(user_id) {
     FROM notes
     WHERE user_id = ?
     `,
-    [user_id]
+    [user_id],
   );
 
   return rows;
@@ -18,20 +18,40 @@ export async function getMyNotes(user_id) {
 export async function getAllNotes({
   page = 1,
   limit = 10,
-  search = null
+  search = null,
+  searchName = null,
+  searchFirstLastName = null,
+  searchEmail = null,
 }) {
-
   const offset = (page - 1) * limit;
 
   let where = "";
-  let params = [];
+let params = [];
+const conditions = [];
 
-  // 🔍 SEARCH por título
-  if (search) {
-    where = "WHERE n.title LIKE ?";
-    params.push(`%${search}%`);
-  }
+if (search) {
+  conditions.push("n.title LIKE ?");
+  params.push(`%${search}%`);
+}
 
+if (searchName) {
+  conditions.push("u.names LIKE ?");
+  params.push(`%${searchName}%`);
+}
+
+if (searchFirstLastName) {
+  conditions.push("u.first_last_name LIKE ?");
+  params.push(`%${searchFirstLastName}%`);
+}
+
+if (searchEmail) {
+  conditions.push("u.email LIKE ?");
+  params.push(`%${searchEmail}%`);
+}
+
+if (conditions.length > 0) {
+  where = `WHERE (${conditions.join(" OR ")})`;
+}
   // 🔹 DATA
   const [rows] = await pool.query(
     `
@@ -53,7 +73,7 @@ export async function getAllNotes({
     ORDER BY n.created_at DESC
     LIMIT ? OFFSET ?
     `,
-    [...params, Number(limit), Number(offset)]
+    [...params, Number(limit), Number(offset)],
   );
 
   // 🔹 TOTAL
@@ -61,28 +81,29 @@ export async function getAllNotes({
     `
     SELECT COUNT(*) AS total
     FROM notes n
+    JOIN users u ON n.user_id = u.id
     ${where}
     `,
-    params
+    params,
   );
 
   // 🔹 FORMATO
-  const formatted = rows.map(row => ({
+  const formatted = rows.map((row) => ({
     content: {
       id: row.id,
       title: row.title,
       note_type: row.note_type,
       content: row.content,
       created_at: row.created_at,
-      updated_at: row.updated_at
+      updated_at: row.updated_at,
     },
     user: {
       id: row.user_id,
       names: row.names,
       first_last_name: row.first_last_name,
       second_last_name: row.second_last_name,
-      email: row.email
-    }
+      email: row.email,
+    },
   }));
 
   return {
@@ -91,13 +112,12 @@ export async function getAllNotes({
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   };
 }
 
 export async function createNotes(title, note_type, content, user_id) {
-
   if (!title) {
     throw new Error("El título es requerido");
   }
@@ -110,12 +130,7 @@ export async function createNotes(title, note_type, content, user_id) {
     `
     INSERT INTO notes (title, note_type, content, user_id) VALUES(?,?,?,?)
     `,
-    [
-      title,
-      note_type || "NOTA", 
-      content,
-      user_id
-    ]
+    [title, note_type || "NOTA", content, user_id],
   );
 
   return {
@@ -123,7 +138,7 @@ export async function createNotes(title, note_type, content, user_id) {
     title,
     note_type: note_type || "NOTA",
     content,
-    user_id
+    user_id,
   };
 }
 
@@ -133,9 +148,8 @@ export async function patchNotes(id, data, user) {
 
   const camposPermitidos = ["title", "note_type", "content"];
 
-  camposPermitidos.forEach(campo => {
+  camposPermitidos.forEach((campo) => {
     if (data[campo] !== undefined) {
-
       // 🔥 VALIDACIÓN ENUM
       if (campo === "note_type" && !NOTE_TYPES.includes(data[campo])) {
         throw new Error("Tipo de nota inválido");

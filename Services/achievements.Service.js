@@ -8,7 +8,7 @@ export async function getMyAchievements(user_id) {
     WHERE user_id = ?
     ORDER BY created_at DESC
     `,
-    [user_id]
+    [user_id],
   );
 
   return rows;
@@ -17,18 +17,40 @@ export async function getMyAchievements(user_id) {
 export async function getAllAchievements({
   page = 1,
   limit = 10,
-  search = null
+  search = null,
+  searchName = null,
+  searchFirstLastName = null,
+  searchEmail = null,
 }) {
-
   const offset = (page - 1) * limit;
 
   let where = "";
   let params = [];
+  const conditions = [];
 
   // 🔍 SEARCH por título
   if (search && search.trim() !== "") {
-    where = "WHERE a.title LIKE ?";
+    conditions.push("a.title LIKE ?");
     params.push(`%${search}%`);
+  }
+
+  if (searchName && searchName.trim() !== "") {
+    conditions.push("u.names LIKE ?");
+    params.push(`%${searchName}%`);
+  }
+
+  if (searchFirstLastName && searchFirstLastName.trim() !== "") {
+    conditions.push("u.first_last_name LIKE ?");
+    params.push(`%${searchFirstLastName}%`);
+  }
+  
+  if (searchEmail && searchEmail.trim() !== "") {
+    conditions.push("u.email LIKE ?");
+    params.push(`%${searchEmail}%`);
+  }
+
+  if (conditions.length > 0) {
+    where = `WHERE (${conditions.join(" OR ")})`;
   }
 
   // 🔹 DATA
@@ -53,7 +75,7 @@ export async function getAllAchievements({
     ORDER BY a.created_at DESC
     LIMIT ? OFFSET ?
     `,
-    [...params, Number(limit), Number(offset)]
+    [...params, Number(limit), Number(offset)],
   );
 
   // 🔹 TOTAL
@@ -61,13 +83,14 @@ export async function getAllAchievements({
     `
     SELECT COUNT(*) AS total
     FROM achievements a
+    JOIN users u ON a.user_id = u.id
     ${where}
     `,
-    params
+    params,
   );
 
   // 🔹 FORMATO
-  const formatted = rows.map(row => ({
+  const formatted = rows.map((row) => ({
     achievement: {
       id: row.id,
       title: row.title,
@@ -75,15 +98,15 @@ export async function getAllAchievements({
       achieved_at: row.achieved_at,
       achievement_type: row.achievement_type,
       created_at: row.created_at,
-      updated_at: row.updated_at
+      updated_at: row.updated_at,
     },
     user: {
       id: row.user_id,
       names: row.names,
       first_last_name: row.first_last_name,
       second_last_name: row.second_last_name,
-      email: row.email
-    }
+      email: row.email,
+    },
   }));
 
   return {
@@ -92,13 +115,18 @@ export async function getAllAchievements({
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   };
 }
 
-export async function createAchievement(title, description, achieved_at, achievement_type, user_id) {
-
+export async function createAchievement(
+  title,
+  description,
+  achieved_at,
+  achievement_type,
+  user_id,
+) {
   if (!title) {
     throw new Error("El título es requerido");
   }
@@ -108,7 +136,7 @@ export async function createAchievement(title, description, achieved_at, achieve
     INSERT INTO achievements (title, description, achieved_at, achievement_type, user_id)
     VALUES (?, ?, ?, ?, ?)
     `,
-    [title, description, achieved_at, achievement_type || "PERSONAL", user_id]
+    [title, description, achieved_at, achievement_type || "PERSONAL", user_id],
   );
 
   return {
@@ -117,7 +145,7 @@ export async function createAchievement(title, description, achieved_at, achieve
     description,
     achieved_at,
     achievement_type: achievement_type || "PERSONAL",
-    user_id
+    user_id,
   };
 }
 
@@ -125,9 +153,14 @@ export async function patchAchievement(id, data, user) {
   const fields = [];
   const values = [];
 
-  const camposPermitidos = ["title", "description", "achieved_at", "achievement_type"];
+  const camposPermitidos = [
+    "title",
+    "description",
+    "achieved_at",
+    "achievement_type",
+  ];
 
-  camposPermitidos.forEach(campo => {
+  camposPermitidos.forEach((campo) => {
     if (data[campo] !== undefined) {
       fields.push(`${campo} = ?`);
       values.push(data[campo]);
@@ -154,7 +187,6 @@ export async function patchAchievement(id, data, user) {
 
   return { message: "Logro actualizado correctamente" };
 }
-
 
 export async function deleteAchievement(id, user) {
   let query = "DELETE FROM achievements WHERE id = ?";

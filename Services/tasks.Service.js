@@ -1,6 +1,5 @@
 import { pool } from "../DB/ConexionDB.js";
 
-
 // 🔹 GET MIS TASKS (USER)
 export async function getMyTasks(user_id) {
   const [rows] = await pool.query(
@@ -10,7 +9,7 @@ export async function getMyTasks(user_id) {
     WHERE user_id = ?
     ORDER BY created_at DESC
     `,
-    [user_id]
+    [user_id],
   );
 
   return rows;
@@ -19,18 +18,40 @@ export async function getMyTasks(user_id) {
 export async function getAllTasks({
   page = 1,
   limit = 10,
-  search = null
+  search = null,
+  searchName = null,
+  searchFirstLastName = null,
+  searchEmail = null,
 }) {
-
   const offset = (page - 1) * limit;
 
   let where = "";
   let params = [];
+  const conditions = [];
 
   // 🔍 SEARCH por título
   if (search && search.trim() !== "") {
-    where = "WHERE t.title LIKE ?";
+    conditions.push("t.title LIKE ?");
     params.push(`%${search}%`);
+  }
+
+  if (searchName && searchName.trim() !== "") {
+    conditions.push("u.names LIKE ?");
+    params.push(`%${searchName}%`);
+  }
+
+  if (searchFirstLastName && searchFirstLastName.trim() !== "") {
+    conditions.push("u.first_last_name LIKE ?");
+    params.push(`%${searchFirstLastName}%`);
+  }
+
+  if (searchEmail && searchEmail.trim() !== "") {
+    conditions.push("u.email LIKE ?");
+    params.push(`%${searchEmail}%`);
+  }
+
+  if (conditions.length > 0) {
+    where = `WHERE (${conditions.join(" OR ")})`;
   }
 
   const [rows] = await pool.query(
@@ -54,7 +75,7 @@ export async function getAllTasks({
     ORDER BY t.created_at DESC
     LIMIT ? OFFSET ?
     `,
-    [...params, Number(limit), Number(offset)]
+    [...params, Number(limit), Number(offset)],
   );
 
   // 🔹 TOTAL
@@ -62,13 +83,14 @@ export async function getAllTasks({
     `
     SELECT COUNT(*) AS total
     FROM tasks t
+    JOIN users u ON t.user_id = u.id
     ${where}
     `,
-    params
+    params,
   );
 
   // 🔹 FORMATO
-  const formatted = rows.map(row => ({
+  const formatted = rows.map((row) => ({
     task: {
       id: row.id,
       title: row.title,
@@ -76,15 +98,15 @@ export async function getAllTasks({
       task_date: row.task_date,
       in_progress: row.in_progress,
       created_at: row.created_at,
-      updated_at: row.updated_at
+      updated_at: row.updated_at,
     },
     user: {
       id: row.user_id,
       names: row.names,
       first_last_name: row.first_last_name,
       second_last_name: row.second_last_name,
-      email: row.email
-    }
+      email: row.email,
+    },
   }));
 
   return {
@@ -93,15 +115,19 @@ export async function getAllTasks({
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   };
 }
 
-
 // 🔹 CREATE TASK (USER)
-export async function createTask(title, description, task_date, in_progress, user_id) {
-
+export async function createTask(
+  title,
+  description,
+  task_date,
+  in_progress,
+  user_id,
+) {
   if (!title) {
     throw new Error("El título es requerido");
   }
@@ -117,13 +143,7 @@ export async function createTask(title, description, task_date, in_progress, use
     INSERT INTO tasks (title, description, task_date, in_progress, user_id)
     VALUES (?, ?, ?, ?, ?)
     `,
-    [
-      title,
-      description,
-      task_date,
-      in_progress || "PENDIENTE",
-      user_id
-    ]
+    [title, description, task_date, in_progress || "PENDIENTE", user_id],
   );
 
   return {
@@ -132,10 +152,9 @@ export async function createTask(title, description, task_date, in_progress, use
     description,
     task_date,
     in_progress: in_progress || "PENDIENTE",
-    user_id
+    user_id,
   };
 }
-
 
 // 🔹 PATCH TASK (SOLO USER)
 export async function patchTask(id, data, user) {
@@ -145,9 +164,8 @@ export async function patchTask(id, data, user) {
   const camposPermitidos = ["title", "description", "task_date", "in_progress"];
   const estadosValidos = ["PENDIENTE", "EN PROCESO", "COMPLETADO"];
 
-  camposPermitidos.forEach(campo => {
+  camposPermitidos.forEach((campo) => {
     if (data[campo] !== undefined) {
-
       // validar estado
       if (campo === "in_progress" && !estadosValidos.includes(data[campo])) {
         throw new Error("Estado inválido");
@@ -178,7 +196,6 @@ export async function patchTask(id, data, user) {
 
   return { message: "Tarea actualizada correctamente" };
 }
-
 
 // 🔹 DELETE TASK (USER + ADMIN)
 export async function deleteTask(id, user) {

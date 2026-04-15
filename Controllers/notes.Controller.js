@@ -16,15 +16,29 @@ export async function getMyNotes(req, res) {
 
 export async function getAllNotes(req, res) {
   try {
-    const { page, limit, search } = req.query;
+    const {
+      page,
+      limit,
+      search,
+      searchName,
+      searchFirstLastName,
+      searchEmail
+    } = req.query;
+
+    const pageNumber = Math.max(Number(page) || 1, 1);
+    const limitNumber = Math.min(Number(limit) || 10, 50);
 
     const notes = await NotesService.getAllNotes({
-      page: Number(page) || 1,
-      limit: Number(limit) || 10,
+      page: pageNumber,
+      limit: limitNumber,
       search: search || null,
+      searchName: searchName || null,
+      searchFirstLastName: searchFirstLastName || null,
+      searchEmail: searchEmail || null,
     });
 
     return res.status(200).json(notes);
+
   } catch (error) {
     return res.status(500).json({
       error: error.message,

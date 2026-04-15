@@ -10,26 +10,35 @@ export async function getMyAchievements(req, res) {
     return res.status(200).json(achievements);
   } catch (error) {
     return res.status(500).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
 
 export async function getAllAchievements(req, res) {
   try {
-    const { page, limit, search } = req.query;
+    const {
+      page,
+      limit,
+      search,
+      searchName,
+      searchFirstLastName,
+      searchEmail,
+    } = req.query;
 
     const achievements = await AchievementService.getAllAchievements({
       page: Number(page) || 1,
       limit: Number(limit) || 10,
-      search: search || null
+      search: search || null,
+      searchName: searchName || null,
+      searchFirstLastName: searchFirstLastName || null,
+      searchEmail: searchEmail || null,
     });
 
     return res.status(200).json(achievements);
-
   } catch (error) {
     return res.status(500).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
@@ -41,7 +50,7 @@ export async function createAchievement(req, res) {
 
     if (!title) {
       return res.status(400).json({
-        error: "El título es requerido"
+        error: "El título es requerido",
       });
     }
 
@@ -50,17 +59,16 @@ export async function createAchievement(req, res) {
       description,
       achieved_at,
       achievement_type,
-      req.user.id // 🔥 siempre desde token
+      req.user.id, // 🔥 siempre desde token
     );
 
     return res.status(201).json(achievement);
   } catch (error) {
     return res.status(500).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
-
 
 // 🔹 PATCH (SOLO USER)
 export async function patchAchievement(req, res) {
@@ -70,39 +78,35 @@ export async function patchAchievement(req, res) {
 
     if (Object.keys(data).length === 0) {
       return res.status(400).json({
-        error: "No hay datos para actualizar"
+        error: "No hay datos para actualizar",
       });
     }
 
     const result = await AchievementService.patchAchievement(
       id,
       data,
-      req.user
+      req.user,
     );
 
     return res.status(200).json(result);
   } catch (error) {
     return res.status(403).json({
-      error: error.message
+      error: error.message,
     });
   }
 }
-
 
 // 🔹 DELETE (USER + ADMIN)
 export async function deleteAchievement(req, res) {
   try {
     const { id } = req.params;
 
-    const result = await AchievementService.deleteAchievement(
-      id,
-      req.user
-    );
+    const result = await AchievementService.deleteAchievement(id, req.user);
 
     return res.status(200).json(result);
   } catch (error) {
     return res.status(403).json({
-      error: error.message
+      error: error.message,
     });
   }
 }

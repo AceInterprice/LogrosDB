@@ -1,6 +1,5 @@
 import { pool } from "../DB/ConexionDB.js";
 
-
 // 🔹 GET MIS EXPERIENCIAS (USER)
 export async function getMyExperiences(user_id) {
   const [rows] = await pool.query(
@@ -10,7 +9,7 @@ export async function getMyExperiences(user_id) {
     WHERE user_id = ?
     ORDER BY created_at DESC
     `,
-    [user_id]
+    [user_id],
   );
 
   return rows;
@@ -19,17 +18,39 @@ export async function getMyExperiences(user_id) {
 export async function getAllExperiences({
   page = 1,
   limit = 10,
-  search = null
+  search = null,
+  searchName = null,
+  searchFirstLastName = null,
+  searchEmail = null,
 }) {
-
   const offset = (page - 1) * limit;
 
   let where = "";
   let params = [];
+  const conditions = [];
 
   if (search && search.trim() !== "") {
-    where = "WHERE e.company LIKE ? OR e.position LIKE ?";
+    conditions.push("e.company LIKE ?", "e.position LIKE ?");
     params.push(`%${search}%`, `%${search}%`);
+  }
+
+  if (searchName && searchName.trim() !== "") {
+    conditions.push("u.names LIKE ?");
+    params.push(`%${searchName}%`);
+  }
+
+  if (searchFirstLastName && searchFirstLastName.trim() !== "") {
+    conditions.push("u.first_last_name LIKE ?");
+    params.push(`%${searchFirstLastName}%`);
+  }
+
+  if (searchEmail && searchEmail.trim() !== "") {
+    conditions.push("u.email LIKE ?");
+    params.push(`%${searchEmail}%`);
+  }
+
+  if (conditions.length > 0) {
+    where = `WHERE (${conditions.join(" OR ")})`;
   }
 
   // 🔹 DATA
@@ -55,7 +76,7 @@ export async function getAllExperiences({
     ORDER BY e.created_at DESC
     LIMIT ? OFFSET ?
     `,
-    [...params, Number(limit), Number(offset)]
+    [...params, Number(limit), Number(offset)],
   );
 
   // 🔹 TOTAL
@@ -63,13 +84,14 @@ export async function getAllExperiences({
     `
     SELECT COUNT(*) AS total
     FROM experiences e
+    JOIN users u ON e.user_id = u.id
     ${where}
     `,
-    params
+    params,
   );
 
   // 🔹 FORMATO
-  const formatted = rows.map(row => ({
+  const formatted = rows.map((row) => ({
     experience: {
       id: row.id,
       company: row.company,
@@ -78,15 +100,15 @@ export async function getAllExperiences({
       start_date: row.start_date,
       end_date: row.end_date,
       created_at: row.created_at,
-      updated_at: row.updated_at
+      updated_at: row.updated_at,
     },
     user: {
       id: row.user_id,
       names: row.names,
       first_last_name: row.first_last_name,
       second_last_name: row.second_last_name,
-      email: row.email
-    }
+      email: row.email,
+    },
   }));
 
   return {
@@ -95,8 +117,8 @@ export async function getAllExperiences({
       total,
       page,
       limit,
-      totalPages: Math.ceil(total / limit)
-    }
+      totalPages: Math.ceil(total / limit),
+    },
   };
 }
 
@@ -107,7 +129,7 @@ export async function createExperience(
   description,
   start_date,
   end_date,
-  user_id
+  user_id,
 ) {
   // validación básica
   if (!company && !position) {
@@ -123,7 +145,7 @@ export async function createExperience(
     INSERT INTO experiences (company, position, description, start_date, end_date, user_id)
     VALUES (?, ?, ?, ?, ?, ?)
     `,
-    [company, position, description, start_date, end_date, user_id]
+    [company, position, description, start_date, end_date, user_id],
   );
 
   return {
@@ -133,10 +155,9 @@ export async function createExperience(
     description,
     start_date,
     end_date,
-    user_id
+    user_id,
   };
 }
-
 
 // 🔹 PATCH EXPERIENCE (SOLO USER)
 export async function patchExperience(id, data, user) {
@@ -148,10 +169,10 @@ export async function patchExperience(id, data, user) {
     "position",
     "description",
     "start_date",
-    "end_date"
+    "end_date",
   ];
 
-  camposPermitidos.forEach(campo => {
+  camposPermitidos.forEach((campo) => {
     if (data[campo] !== undefined) {
       fields.push(`${campo} = ?`);
       values.push(data[campo]);
@@ -183,7 +204,6 @@ export async function patchExperience(id, data, user) {
 
   return { message: "Experiencia actualizada correctamente" };
 }
-
 
 // 🔹 DELETE EXPERIENCE (USER + ADMIN)
 export async function deleteExperience(id, user) {
