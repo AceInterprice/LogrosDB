@@ -22,7 +22,7 @@ export const checkToken = (req, res, next) => {
     next();
   } catch (error) {
     if (error.name === "TokenExpiredError") {
-      return next(new Error("Token expirado"));
+      return res.status(401).json({ message: "Token Expirado" });
     }
 
     if (error.name === "JsonWebTokenError") {
